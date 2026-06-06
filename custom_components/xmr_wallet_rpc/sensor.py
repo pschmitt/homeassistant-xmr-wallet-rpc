@@ -45,7 +45,7 @@ class XmrBalanceSensor(XmrEntity, SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "XMR"
     _attr_suggested_display_precision = 6
-    _attr_icon = "mdi:currency-sign"
+    _attr_icon = "cib:monero"
     # Exclude large list attributes from the recorder to avoid DB bloat
     _unrecorded_attributes = frozenset({"transfers", "sub_addresses"})
 
