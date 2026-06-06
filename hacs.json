@@ -1,0 +1,8 @@
+{
+  "name": "Monero Wallet RPC",
+  "domains": [
+    "xmr_wallet_rpc"
+  ],
+  "homeassistant": "2025.1.0",
+  "render_readme": true
+}

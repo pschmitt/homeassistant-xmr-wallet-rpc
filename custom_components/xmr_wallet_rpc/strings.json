@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Monero Wallet RPC",
+        "description": "Enter the connection details for your monero-wallet-rpc instance. Multiple endpoints can be entered (one per line) for automatic failover.",
+        "data": {
+          "endpoints": "RPC endpoint(s)",
+          "username": "Username (optional)",
+          "password": "Password (optional)",
+          "name": "Wallet name"
+        },
+        "data_description": {
+          "endpoints": "One endpoint per line, e.g. `192.168.1.100:18084`. HTTP/HTTPS prefix and `/json_rpc` path are added automatically if missing. Multiple endpoints are tried in order as fallback.",
+          "username": "HTTP Digest auth username, if wallet-rpc is started with `--rpc-login user:pass`.",
+          "password": "HTTP Digest auth password."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Monero Wallet RPC",
+        "description": "Update connection settings. Leave the password field blank to keep the current value.",
+        "data": {
+          "endpoints": "RPC endpoint(s)",
+          "username": "Username (optional)",
+          "password": "Password (leave blank to keep current)",
+          "name": "Wallet name"
+        },
+        "data_description": {
+          "endpoints": "One endpoint per line. Multiple endpoints are tried in order as fallback."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the wallet RPC. Check the endpoint address and network connectivity.",
+      "invalid_auth": "Authentication failed. Check username and password.",
+      "no_endpoints": "At least one endpoint is required.",
+      "unknown": "Unexpected error. Check the logs for details."
+    },
+    "abort": {
+      "already_configured": "This wallet RPC is already configured.",
+      "reconfigure_successful": "Configuration updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Monero Wallet RPC options",
+        "data": {
+          "scan_interval": "Update interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the wallet for updated balances and transfers. Minimum 60 s. Default is 3600 s (1 h)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": {
+        "name": "Balance"
+      }
+    }
+  },
+  "issues": {
+    "cannot_connect": {
+      "title": "Cannot reach Monero wallet RPC for {wallet_name}",
+      "description": "Home Assistant failed to connect to the Monero wallet RPC for **{wallet_name}**.\n\nCheck that `monero-wallet-rpc` is running and all configured endpoints are reachable, then go to **Settings → Devices & services → {wallet_name}** and select **Reconfigure** or **Reload**."
+    }
+  }
+}
