@@ -37,7 +37,7 @@ class XmrAccountData:
     balance: float
     unlocked_balance: float
     sub_addresses: list[dict[str, Any]] = field(default_factory=list)
-    transfers: list[dict[str, Any]] = field(default_factory=list)
+    transactions: list[dict[str, Any]] = field(default_factory=list)
 
 
 class XmrWalletRpcClient:
@@ -100,7 +100,7 @@ class XmrWalletRpcClient:
             unlocked = acct.get("unlocked_balance", 0) / _PICOMONERO
 
             sub_addresses = self._fetch_sub_addresses(idx)
-            transfers = self._fetch_transfers(idx)
+            transactions = self._fetch_transfers(idx)
 
             data[idx] = XmrAccountData(
                 account_index=idx,
@@ -109,7 +109,7 @@ class XmrWalletRpcClient:
                 balance=balance,
                 unlocked_balance=unlocked,
                 sub_addresses=sub_addresses,
-                transfers=transfers,
+                transactions=transactions,
             )
 
         return data

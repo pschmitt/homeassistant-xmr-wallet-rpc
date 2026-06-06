@@ -47,7 +47,7 @@ class XmrBalanceSensor(XmrEntity, SensorEntity):
     _attr_suggested_display_precision = 6
     _attr_icon = "cib:monero"
     # Exclude large list attributes from the recorder to avoid DB bloat
-    _unrecorded_attributes = frozenset({"transfers", "sub_addresses"})
+    _unrecorded_attributes = frozenset({"transactions", "sub_addresses"})
 
     def __init__(self, coordinator: XmrCoordinator, account: XmrAccountData) -> None:
         super().__init__(coordinator)
@@ -84,5 +84,5 @@ class XmrBalanceSensor(XmrEntity, SensorEntity):
             "label": account.label,
             "base_address": account.base_address,
             "sub_addresses": account.sub_addresses,
-            "transfers": account.transfers,
+            "transactions": account.transactions,
         }
