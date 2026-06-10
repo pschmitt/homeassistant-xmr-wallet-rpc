@@ -8,6 +8,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -45,16 +46,12 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
         try:
             data = await self.hass.async_add_executor_job(self.client.fetch_data)
         except XmrWalletAuthError as err:
-            ir.async_create_issue(
-                self.hass,
-                DOMAIN,
-                issue_id,
-                is_fixable=False,
-                severity=ir.IssueSeverity.ERROR,
-                translation_key=REPAIR_CANNOT_CONNECT,
-                translation_placeholders={"wallet_name": wallet_name},
-            )
-            raise UpdateFailed(f"Authentication failed for {wallet_name}: {err}") from err
+            # Surface as an auth failure so HA starts the reauth flow and the
+            # user can re-enter credentials (no repair issue needed).
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+            raise ConfigEntryAuthFailed(
+                f"Authentication failed for {wallet_name}: {err}"
+            ) from err
         except (XmrWalletConnectionError, XmrWalletRpcError) as err:
             ir.async_create_issue(
                 self.hass,

@@ -28,6 +28,17 @@
         "data_description": {
           "endpoints": "One endpoint per line. Multiple endpoints are tried in order as fallback."
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Monero Wallet RPC",
+        "description": "The wallet RPC for **{name}** rejected the stored credentials. Enter the current username and password.",
+        "data": {
+          "username": "Username (optional)",
+          "password": "Password (leave blank for none)"
+        },
+        "data_description": {
+          "password": "HTTP Digest auth password, if wallet-rpc is started with `--rpc-login user:pass`."
+        }
       }
     },
     "error": {
@@ -38,7 +49,8 @@
     },
     "abort": {
       "already_configured": "This wallet RPC is already configured.",
-      "reconfigure_successful": "Configuration updated successfully."
+      "reconfigure_successful": "Configuration updated successfully.",
+      "reauth_successful": "Re-authentication successful."
     }
   },
   "options": {
