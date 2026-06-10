@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -22,4 +22,5 @@ class XmrEntity(CoordinatorEntity[XmrCoordinator]):
             name=entry.title,
             manufacturer="Monero Project",
             model="monero-wallet-rpc",
+            entry_type=DeviceEntryType.SERVICE,
         )
