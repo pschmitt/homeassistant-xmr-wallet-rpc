@@ -10,7 +10,12 @@ import requests
 from requests.auth import HTTPDigestAuth
 
 from .const import DEFAULT_REQUEST_TIMEOUT, MAX_TRANSFERS
-from .exceptions import XmrWalletAuthError, XmrWalletConnectionError, XmrWalletRpcError
+from .exceptions import (
+    XmrWalletAuthError,
+    XmrWalletConnectionError,
+    XmrWalletError,
+    XmrWalletRpcError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -126,6 +131,8 @@ class XmrWalletRpcClient:
                 }
                 for a in result.get("addresses", [])
             ]
+        except XmrWalletError:
+            raise
         except Exception as exc:
             _LOGGER.warning("Failed to fetch sub-addresses for account %d: %s", account_index, exc)
             return []
@@ -162,6 +169,8 @@ class XmrWalletRpcClient:
                     )
             transfers.sort(key=lambda t: t["timestamp"], reverse=True)
             return transfers[:MAX_TRANSFERS]
+        except XmrWalletError:
+            raise
         except Exception as exc:
             _LOGGER.warning("Failed to fetch transfers for account %d: %s", account_index, exc)
             return []
