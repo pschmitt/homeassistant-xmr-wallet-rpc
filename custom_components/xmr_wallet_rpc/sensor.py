@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util.dt import utcnow
 
 from .api import XmrAccountData
-from .const import DOMAIN
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
 from .coordinator import XmrCoordinator
 from .entity import XmrEntity
 
@@ -61,11 +64,13 @@ class XmrBalanceSensor(XmrEntity, SensorEntity):
 
     @property
     def _account(self) -> XmrAccountData | None:
-        return self.coordinator.data.get(self._account_index)
+        if self.coordinator.data and self._account_index in self.coordinator.data:
+            return self.coordinator.data[self._account_index]
+        return self.coordinator.cached_account(self._account_index)
 
     @property
     def available(self) -> bool:
-        return self.coordinator.last_update_success and self._account is not None
+        return self._account is not None
 
     @property
     def native_value(self) -> float | None:
@@ -85,4 +90,22 @@ class XmrBalanceSensor(XmrEntity, SensorEntity):
             "base_address": account.base_address,
             "sub_addresses": account.sub_addresses,
             "transactions": account.transactions,
+            "last_polled_at": account.last_polled_at.isoformat()
+            if account.last_polled_at
+            else None,
+            "last_error": self.coordinator.last_error,
+            "stale": _is_stale(
+                account,
+                self.coordinator.config_entry.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                ),
+            ),
         }
+
+
+def _is_stale(account: XmrAccountData, scan_interval_seconds: int) -> bool:
+    """True when the cached balance is older than a few expected poll windows."""
+    if account.last_polled_at is None:
+        return True
+    threshold = max(scan_interval_seconds * 3, 3600)
+    return (utcnow() - account.last_polled_at) > timedelta(seconds=threshold)

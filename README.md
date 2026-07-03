@@ -11,6 +11,7 @@ daemon and exposes wallet balances and transfer history as sensor entities.
 - Rich sensor attributes: unlocked balance, locked balance, sub-addresses, recent transfers
 - **Multiple RPC endpoints** with automatic ordered failover — if the first endpoint is
   unreachable, the next one is tried automatically
+- Cached balances survive Home Assistant restarts and transient wallet/RPC failures
 - Fully configurable via the HA UI (no YAML needed)
 - Options flow to tune the poll interval
 - Reconfigure flow to update endpoints, credentials, or wallet name without deleting the entry
@@ -59,7 +60,7 @@ Assistant `custom_components/` folder, then restart.
 
 | Sensor | State | Key attributes |
 |--------|-------|----------------|
-| `sensor.<name>_balance` | Total XMR balance | `unlocked_balance`, `locked_balance`, `base_address`, `sub_addresses`, `transfers` |
+| `sensor.<name>_balance` | Total XMR balance | `unlocked_balance`, `locked_balance`, `base_address`, `sub_addresses`, `transfers`, `last_polled_at`, `last_error`, `stale` |
 | `sensor.<name>_account_N_balance` *(multi-account)* | Balance for account N | same as above |
 
 Transfer entries in the `transfers` attribute:

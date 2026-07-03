@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -43,6 +44,7 @@ class XmrAccountData:
     unlocked_balance: float
     sub_addresses: list[dict[str, Any]] = field(default_factory=list)
     transactions: list[dict[str, Any]] = field(default_factory=list)
+    last_polled_at: datetime | None = None
 
 
 class XmrWalletRpcClient:
