@@ -10,15 +10,24 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .api import XmrAccountData, XmrWalletRpcClient
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, REPAIR_CANNOT_CONNECT, STORAGE_VERSION
+from .const import (
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    MAX_RELOAD_RETRIES,
+    RELOAD_RETRY_DELAY_SECONDS,
+    REPAIR_CANNOT_CONNECT,
+    STORAGE_VERSION,
+)
 from .exceptions import XmrWalletAuthError, XmrWalletConnectionError, XmrWalletRpcError
 
 _LOGGER = logging.getLogger(__name__)
+_RETRY_STATE_KEY = "__retry_state__"
 
 
 class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
@@ -43,6 +52,7 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
         self.last_refresh: datetime | None = None
         self.last_error: str = ""
         self._cached: dict[int, XmrAccountData] = {}
+        self._cancel_retry_reload: Any | None = None
         self._store: Store[dict[str, Any]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{config_entry.entry_id}.cache"
         )
@@ -88,6 +98,43 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
         """Return the last cached snapshot for an account."""
         return self._cached.get(account_index)
 
+    @property
+    def _retry_state(self) -> dict[str, Any]:
+        """Shared retry state that survives integration reloads."""
+        return self.hass.data.setdefault(DOMAIN, {}).setdefault(_RETRY_STATE_KEY, {}).setdefault(
+            self.config_entry.entry_id,
+            {"consecutive_failures": 0, "reload_pending": False},
+        )
+
+    def _reset_retry_state(self) -> None:
+        """Clear transient connection failure state after a successful refresh."""
+        self._retry_state["consecutive_failures"] = 0
+        self._retry_state["reload_pending"] = False
+        if self._cancel_retry_reload is not None:
+            self._cancel_retry_reload()
+            self._cancel_retry_reload = None
+
+    def _schedule_reload_retry(self) -> None:
+        """Schedule a delayed integration reload if one is not already pending."""
+        if self._retry_state["reload_pending"]:
+            return
+
+        self._retry_state["reload_pending"] = True
+
+        async def _reload_entry(_now: datetime) -> None:
+            self._retry_state["reload_pending"] = False
+            self._cancel_retry_reload = None
+            _LOGGER.debug(
+                "Retrying Monero Wallet RPC entry %s via reload after connection failure",
+                self.config_entry.entry_id,
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+
+        self._cancel_retry_reload = async_call_later(
+            self.hass, RELOAD_RETRY_DELAY_SECONDS, _reload_entry
+        )
+        self.config_entry.async_on_unload(self._cancel_retry_reload)
+
     async def _async_update_data(self) -> dict[int, XmrAccountData]:
         issue_id = f"{REPAIR_CANNOT_CONNECT}_{self.config_entry.entry_id}"
         wallet_name = self.config_entry.title
@@ -105,6 +152,24 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
             self.config_entry.async_start_reauth(self.hass)
             return self._cached_snapshot()
         except (XmrWalletConnectionError, XmrWalletRpcError) as err:
+            self.last_error = "cannot_connect"
+            retry_state = self._retry_state
+            retry_state["consecutive_failures"] += 1
+            failure_count = retry_state["consecutive_failures"]
+
+            if failure_count <= MAX_RELOAD_RETRIES:
+                _LOGGER.warning(
+                    "Connection error for %s; keeping cached balances and scheduling reload "
+                    "retry %d/%d in %ds: %s",
+                    wallet_name,
+                    failure_count,
+                    MAX_RELOAD_RETRIES,
+                    RELOAD_RETRY_DELAY_SECONDS,
+                    err,
+                )
+                self._schedule_reload_retry()
+                return self._cached_snapshot()
+
             ir.async_create_issue(
                 self.hass,
                 DOMAIN,
@@ -114,16 +179,18 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
                 translation_key=REPAIR_CANNOT_CONNECT,
                 translation_placeholders={"wallet_name": wallet_name},
             )
-            self.last_error = "cannot_connect"
             _LOGGER.warning(
-                "Connection error for %s; keeping cached balances: %s",
+                "Connection error for %s after %d reload retries; raising repair and "
+                "keeping cached balances: %s",
                 wallet_name,
+                MAX_RELOAD_RETRIES,
                 err,
             )
             return self._cached_snapshot()
 
         ir.async_delete_issue(self.hass, DOMAIN, issue_id)
         self.last_error = ""
+        self._reset_retry_state()
         self.last_refresh = dt_util.utcnow()
         for account in data.values():
             account.last_polled_at = self.last_refresh

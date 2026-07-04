@@ -15,7 +15,7 @@ daemon and exposes wallet balances and transfer history as sensor entities.
 - Fully configurable via the HA UI (no YAML needed)
 - Options flow to tune the poll interval
 - Reconfigure flow to update endpoints, credentials, or wallet name without deleting the entry
-- Raises a **repair issue** when all endpoints are unreachable or authentication fails
+- Retries integration reloads several times before raising a **repair issue** for unreachable RPC endpoints
 
 ## Requirements
 
@@ -81,8 +81,9 @@ Transfer entries in the `transfers` attribute:
 To change endpoints, credentials, or wallet name: **Settings → Devices & services →
 Monero Wallet RPC → Configure**.
 
-When the wallet RPC is unreachable, a repair issue is raised in HA. Fix the connectivity issue and
-then reload the integration.
+When the wallet RPC is temporarily unreachable, the integration retries by reloading itself a few
+times first. Only persistent failures raise a repair issue in HA. Authentication failures still
+trigger reauthentication immediately.
 
 ## License
 
