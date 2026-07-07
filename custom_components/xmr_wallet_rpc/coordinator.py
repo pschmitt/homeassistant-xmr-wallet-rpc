@@ -51,6 +51,8 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
         self.client = client
         self.last_refresh: datetime | None = None
         self.last_error: str = ""
+        self.last_txid: str | None = None
+        self.new_transaction: dict[str, Any] | None = None
         self._cached: dict[int, XmrAccountData] = {}
         self._cancel_retry_reload: Any | None = None
         self._store: Store[dict[str, Any]] = Store(
@@ -71,6 +73,7 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
                 self._cached[account.account_index] = account
 
         self.last_refresh = _parse_iso(stored.get("last_polled_at"))
+        self.last_txid = stored.get("last_txid")
 
         if self._cached:
             _LOGGER.debug(
@@ -87,6 +90,7 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
                 "last_polled_at": self.last_refresh.isoformat()
                 if self.last_refresh
                 else None,
+                "last_txid": self.last_txid,
                 "accounts": {
                     str(account_index): _account_to_stored(account)
                     for account_index, account in self._cached.items()
@@ -138,6 +142,7 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
     async def _async_update_data(self) -> dict[int, XmrAccountData]:
         issue_id = f"{REPAIR_CANNOT_CONNECT}_{self.config_entry.entry_id}"
         wallet_name = self.config_entry.title
+        self.new_transaction = None
 
         try:
             data = await self.hass.async_add_executor_job(self.client.fetch_data)
@@ -196,6 +201,18 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
             account.last_polled_at = self.last_refresh
 
         self._cached = dict(data)
+
+        latest = _latest_transfer(data)
+        if latest is not None:
+            txid = latest.get("txid")
+            if txid is not None and txid != self.last_txid:
+                # Only report a new transaction once a baseline txid is known;
+                # the very first poll ever (no persisted last_txid yet) just
+                # seeds the baseline so we don't notify on initial setup.
+                if self.last_txid is not None:
+                    self.new_transaction = latest
+                self.last_txid = txid
+
         await self._save_cache()
         return dict(self._cached)
 
@@ -250,3 +267,16 @@ def _parse_iso(value: Any) -> datetime | None:
         return datetime.fromisoformat(value)
     except (TypeError, ValueError):
         return None
+
+
+def _latest_transfer(data: dict[int, XmrAccountData]) -> dict[str, Any] | None:
+    """Return the most recently timestamped transfer across all sub-accounts."""
+    best: dict[str, Any] | None = None
+    best_ts = -1
+    for account in data.values():
+        for tx in account.transactions or []:
+            ts = tx.get("timestamp") or 0
+            if ts > best_ts:
+                best_ts = ts
+                best = tx
+    return best

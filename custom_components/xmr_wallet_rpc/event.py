@@ -30,7 +30,12 @@ class XmrLastTransactionEvent(XmrEntity, EventEntity):
     """Event entity that fires when a new Monero transfer is detected.
 
     Watches all sub-accounts in the wallet and fires on the most recently
-    timestamped transfer across all of them.
+    timestamped transfer across all of them. New-transaction detection lives
+    in the coordinator (coordinator.new_transaction), whose last-seen txid is
+    persisted to disk — this entity gets recreated on every reload (e.g. the
+    connection-failure retry-reload loop), so tracking the baseline in-memory
+    here would silently swallow notifications for the first transaction seen
+    after any such reload.
     """
 
     _attr_event_types = ["transaction"]
@@ -40,54 +45,26 @@ class XmrLastTransactionEvent(XmrEntity, EventEntity):
     def __init__(self, coordinator: XmrCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.config_entry.entry_id}:last_transaction"
-        self._last_txid: str | None = None
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        data = self.coordinator.data
-        if not data:
-            super()._handle_coordinator_update()
-            return
-
-        latest = _latest_transfer(data)
-        if latest is None:
-            super()._handle_coordinator_update()
-            return
-
-        txid = latest.get("txid")
-
-        if self._last_txid is None:
-            self._last_txid = txid
-        elif txid is not None and txid != self._last_txid:
-            self._last_txid = txid
+        new_transaction = self.coordinator.new_transaction
+        if new_transaction is not None:
             self._trigger_event(
                 "transaction",
                 {
-                    "txid": txid,
-                    "type": latest.get("type"),
-                    "amount": latest.get("amount"),
-                    "fee": latest.get("fee"),
-                    "height": latest.get("height"),
-                    "timestamp": latest.get("timestamp"),
-                    "confirmations": latest.get("confirmations"),
-                    "address": latest.get("address"),
-                    "note": latest.get("note"),
-                    "payment_id": latest.get("payment_id"),
+                    "txid": new_transaction.get("txid"),
+                    "type": new_transaction.get("type"),
+                    "amount": new_transaction.get("amount"),
+                    "fee": new_transaction.get("fee"),
+                    "height": new_transaction.get("height"),
+                    "timestamp": new_transaction.get("timestamp"),
+                    "confirmations": new_transaction.get("confirmations"),
+                    "address": new_transaction.get("address"),
+                    "note": new_transaction.get("note"),
+                    "payment_id": new_transaction.get("payment_id"),
                 },
             )
             return  # _trigger_event already calls async_write_ha_state
 
         super()._handle_coordinator_update()
-
-
-def _latest_transfer(data: dict) -> dict | None:
-    """Return the most recently timestamped transfer across all sub-accounts."""
-    best: dict | None = None
-    best_ts = -1
-    for account in data.values():
-        for tx in (account.transactions or []):
-            ts = tx.get("timestamp") or 0
-            if ts > best_ts:
-                best_ts = ts
-                best = tx
-    return best
