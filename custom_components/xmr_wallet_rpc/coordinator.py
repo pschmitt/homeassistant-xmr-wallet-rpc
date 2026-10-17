@@ -87,9 +87,7 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
         """Persist the latest successful account snapshot."""
         await self._store.async_save(
             {
-                "last_polled_at": self.last_refresh.isoformat()
-                if self.last_refresh
-                else None,
+                "last_polled_at": self.last_refresh.isoformat() if self.last_refresh else None,
                 "last_txid": self.last_txid,
                 "accounts": {
                     str(account_index): _account_to_stored(account)
@@ -105,9 +103,13 @@ class XmrCoordinator(DataUpdateCoordinator[dict[int, XmrAccountData]]):
     @property
     def _retry_state(self) -> dict[str, Any]:
         """Shared retry state that survives integration reloads."""
-        return self.hass.data.setdefault(DOMAIN, {}).setdefault(_RETRY_STATE_KEY, {}).setdefault(
-            self.config_entry.entry_id,
-            {"consecutive_failures": 0, "reload_pending": False},
+        return (
+            self.hass.data.setdefault(DOMAIN, {})
+            .setdefault(_RETRY_STATE_KEY, {})
+            .setdefault(
+                self.config_entry.entry_id,
+                {"consecutive_failures": 0, "reload_pending": False},
+            )
         )
 
     def _reset_retry_state(self) -> None:
@@ -253,9 +255,7 @@ def _account_to_stored(account: XmrAccountData) -> dict[str, Any]:
         "unlocked_balance": account.unlocked_balance,
         "sub_addresses": account.sub_addresses,
         "transactions": account.transactions,
-        "last_polled_at": account.last_polled_at.isoformat()
-        if account.last_polled_at
-        else None,
+        "last_polled_at": account.last_polled_at.isoformat() if account.last_polled_at else None,
     }
 
 

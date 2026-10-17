@@ -66,7 +66,7 @@ class XmrWalletRpcClient:
         payload = {"jsonrpc": "2.0", "id": "0", "method": method, "params": params or {}}
         auth = HTTPDigestAuth(self._username, self._password) if self._username else None
 
-        ordered = self._endpoints[self._preferred_idx:] + self._endpoints[: self._preferred_idx]
+        ordered = self._endpoints[self._preferred_idx :] + self._endpoints[: self._preferred_idx]
         last_exc: Exception | None = None
 
         for offset, url in enumerate(ordered):
