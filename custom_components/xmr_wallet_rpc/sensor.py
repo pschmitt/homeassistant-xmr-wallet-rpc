@@ -30,7 +30,7 @@ async def async_setup_entry(
     @callback
     def _add_missing() -> None:
         new: list[SensorEntity] = []
-        for account_index, account in coordinator.data.items():
+        for account_index, account in (coordinator.data or {}).items():
             if account_index in known_accounts:
                 continue
             known_accounts.add(account_index)

@@ -30,15 +30,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     coordinator = XmrCoordinator(hass, client, config_entry)
     await coordinator.async_load_cache()
-    await coordinator.async_config_entry_first_refresh()
 
     runtime[config_entry.entry_id] = {
         "client": client,
         "coordinator": coordinator,
     }
 
+    if coordinator.data is None:
+        coordinator.last_update_success = False
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     config_entry.async_on_unload(config_entry.add_update_listener(async_update_listener))
+    config_entry.async_create_background_task(
+        hass, coordinator.async_refresh(), "xmr_wallet_rpc_first_refresh"
+    )
     return True
 
 
