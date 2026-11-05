@@ -31,14 +31,15 @@ monero-wallet-rpc \
 
 ## Installation
 
-### HACS (recommended)
+### Marketplace / HACS
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pschmitt&repository=homeassistant-xmr-wallet-rpc&category=integration)
+[![Open this integration in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&repository=homeassistant-xmr-wallet-rpc&category=integration)
 
-1. Click the badge above — or open HACS → Integrations → ⋮ → Custom repositories and add
-   `https://github.com/pschmitt/homeassistant-xmr-wallet-rpc` as type **Integration**.
-2. Install **Monero Wallet RPC**.
-3. Restart Home Assistant.
+Use the badge to add this repository as a custom integration in Home Assistant
+Marketplace (Home Assistant 2026.11 or later). On older versions, add it under
+**HACS → Integrations → ⋮ → Custom repositories** with category
+**Integration**. Neither route implies a public catalog listing. Install
+**Monero Wallet RPC** and restart Home Assistant.
 
 ### Manual
 
