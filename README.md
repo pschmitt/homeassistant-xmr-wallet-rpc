@@ -1,91 +1,44 @@
-# Monero Wallet RPC for Home Assistant
+<p align="center">
+  <img src="logo.png" width="128" alt="Monero Wallet RPC integration logo">
+</p>
 
-`xmr_wallet_rpc` is a Home Assistant custom integration that connects to your
-[monero-wallet-rpc](https://www.getmonero.org/resources/developer-guides/wallet-rpc.html)
-daemon and exposes wallet balances and transfer history as sensor entities.
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&amp;repository=homeassistant-xmr-wallet-rpc&amp;category=integration"><img src="https://my.home-assistant.io/badges/marketplace_repository.svg" alt="Open this integration in Home Assistant Marketplace"></a>
+</p>
+
+<h1 align="center">Monero Wallet RPC for Home Assistant</h1>
+
+<p align="center">Expose Monero wallet balances and recent transfers as Home Assistant sensors.</p>
 
 ## Features
 
-- One Home Assistant **device** per wallet configuration
-- One **balance sensor** per Monero account (account index), with state = total balance in XMR
-- Rich sensor attributes: unlocked balance, locked balance, sub-addresses, recent transfers
-- **Multiple RPC endpoints** with automatic ordered failover — if the first endpoint is
-  unreachable, the next one is tried automatically
-- Cached balances survive Home Assistant restarts and transient wallet/RPC failures
-- Fully configurable via the HA UI (no YAML needed)
-- Options flow to tune the poll interval
-- Reconfigure flow to update endpoints, credentials, or wallet name without deleting the entry
-- Retries integration reloads several times before raising a **repair issue** for unreachable RPC endpoints
+- **Account balances:** Create one sensor per wallet account, including locked and unlocked balances and recent transfers.
+- **Ordered failover:** Try multiple RPC endpoints in order when the primary wallet endpoint is unreachable. See [Wallet setup](docs/wallet-setup.md).
+- **Cached data:** Retain the last known balances across restarts and temporary failures.
+- **UI configuration:** Adjust endpoints, credentials and polling interval, with reauthentication and repair flows.
 
-## Requirements
+## Install
 
-A running `monero-wallet-rpc` instance reachable from your Home Assistant server:
+Use the Marketplace badge above on Home Assistant 2026.11 or later to add this
+repository as a custom integration. On older versions, add it as a HACS
+custom repository of type **Integration**. Install and restart Home Assistant.
+The badge does not imply a public catalog listing. For manual installation,
+copy `custom_components/xmr_wallet_rpc/` into Home Assistant's
+`custom_components/` directory and restart.
 
-```sh
-monero-wallet-rpc \
-  --wallet-file /path/to/wallet \
-  --rpc-bind-port 18084 \
-  --rpc-login user:password \   # optional; omit if no auth
-  --daemon-address 127.0.0.1:18081
-```
+## Quick start
 
-## Installation
+1. Start a `monero-wallet-rpc` instance reachable from Home Assistant.
+2. Add **Monero Wallet RPC** under **Settings → Devices & services → Add integration**.
+3. Enter the RPC endpoint (such as `wallet.example.com:18084`) and optional login.
+4. Inspect the balance sensor for your wallet accounts.
 
-### Marketplace / HACS
+## Documentation
 
-[![Open this integration in Home Assistant Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=pschmitt&repository=homeassistant-xmr-wallet-rpc&category=integration)
-
-Use the badge to add this repository as a custom integration in Home Assistant
-Marketplace (Home Assistant 2026.11 or later). On older versions, add it under
-**HACS → Integrations → ⋮ → Custom repositories** with category
-**Integration**. Neither route implies a public catalog listing. Install
-**Monero Wallet RPC** and restart Home Assistant.
-
-### Manual
-
-Copy the `custom_components/xmr_wallet_rpc/` directory from this repository into your Home
-Assistant `custom_components/` folder, then restart.
-
-## Configuration
-
-1. Go to **Settings → Devices & services → Add integration**.
-2. Search for **Monero Wallet RPC**.
-3. Fill in:
-   - **RPC endpoint(s)** — one per line, e.g. `192.168.1.100:18084`. HTTP/HTTPS prefix and the
-     `/json_rpc` path suffix are added automatically. Enter multiple endpoints for failover.
-   - **Username** — optional; the user part of `--rpc-login`.
-   - **Password** — optional; the password part of `--rpc-login`.
-   - **Wallet name** — display name for the HA device (default: `XMR`).
-
-## Sensors
-
-| Sensor | State | Key attributes |
-|--------|-------|----------------|
-| `sensor.<name>_balance` | Total XMR balance | `unlocked_balance`, `locked_balance`, `base_address`, `sub_addresses`, `transfers`, `last_polled_at`, `last_error`, `stale` |
-| `sensor.<name>_account_N_balance` *(multi-account)* | Balance for account N | same as above |
-
-Transfer entries in the `transfers` attribute:
-
-| Field | Description |
+| Topic | Description |
 |-------|-------------|
-| `type` | `in`, `out`, `pending`, or `pool` |
-| `txid` | Transaction ID |
-| `amount` | XMR amount |
-| `fee` | Miner fee in XMR |
-| `timestamp` | Unix timestamp |
-| `confirmations` | Block confirmations |
-| `address` | Counterparty address |
-| `note` | Optional note |
-
-## Reconfiguration & repair
-
-To change endpoints, credentials, or wallet name: **Settings → Devices & services →
-Monero Wallet RPC → Configure**.
-
-When the wallet RPC is temporarily unreachable, the integration retries by reloading itself a few
-times first. Only persistent failures raise a repair issue in HA. Authentication failures still
-trigger reauthentication immediately.
+| [Wallet setup](docs/wallet-setup.md) | RPC endpoints, sensor attributes, reconfiguration and repairs |
 
 ## License
 
-GPL-3.0-or-later — see [LICENSE](LICENSE).
+[GPL-3.0-or-later](LICENSE).
